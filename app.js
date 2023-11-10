@@ -1,13 +1,13 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const indexRouter = require('./routes/index');
+const lottery = require('./lottery');
 
-var app = express();
+const app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -15,12 +15,11 @@ app.set('view engine', 'jade');
 
 app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -40,8 +39,8 @@ app.use(function(err, req, res, next) {
 
 const req = http.request(new URL(dbschema.fieldRequest('channel')), (res) => {
   res.on('data', (d) => {
-      channels = d.toString().split(',');
-      channelCallback();
+    channels = d.toString().split(',');
+    channelCallback();
   });
 });
 req.on('error', (error) => {
@@ -51,51 +50,53 @@ req.end();
 
 
 const channelCallback = () => {
-    /** @type {tmi.Options} */
-    const opts = {
-      identity: {
-          username: process.env.SEC_BOTUSERNAME,
-          password: process.env.SEC_OAUTHTOKEN,
-      },
-      channels: [process.env.SEC_BOTUSERNAME],
-    };
+  /** @type {tmi.Options} */
+  const opts = {
+    identity: {
+      username: process.env.SEC_BOTUSERNAME,
+      password: process.env.SEC_OAUTHTOKEN,
+    },
+    channels: [process.env.SEC_BOTUSERNAME],
+  };
 
-    // eslint-disable-next-line new-cap
-    const client = new tmi.client(opts);
-    client.on('connected', onConnectedHandler);
-    client.on('chat', onChatHandler);
-    client.connect();
+  // eslint-disable-next-line new-cap
+  const client = new tmi.client(opts);
+  client.on('connected', onConnectedHandler);
+  client.on('chat', onChatHandler);
+  client.connect();
 
-    /**
-     * Print connection information (address and port)
-     * @param {string} addr - the connected IP address
-     * @param {number} port - the connected port
-     */
-    function onConnectedHandler(addr, port) {
-      console.log(`* Connected to ${addr}:${port}`);
+  /**
+   * Print connection information (address and port)
+   * @param {string} addr - the connected IP address
+   * @param {number} port - the connected port
+   */
+  function onConnectedHandler(addr, port) {
+    console.log(`* Connected to ${addr}:${port}`);
+  }
+
+  /**
+   * Processes a chat message
+   * @param {string} channel
+   * @param {tmi.ChatUserstate} userstate
+   * @param {string} message
+   * @param {boolean} self
+   */
+  function onChatHandler(channel, userstate, message, self) {
+    if (self || !message.startsWith('!play')) return;
+
+    /** @type {string} */
+    const username = userstate['display-name'];
+    const [entry, alreadyFound] = lottery.addEntry(username);
+
+    if (alreadyFound) {
+      client.say(channel,
+          `@${username}: You already entered for this round! 
+          Your numbers are ${entry}`);
+    } else {
+      client.say(channel,
+          `@${username}: Successfully entered! Your numbers are ${entry}`);
     }
-
-    /**
-     *
-     * @param {string} channel
-     * @param {tmi.ChatUserstate} userstate
-     * @param {string} message
-     * @param {boolean} self
-     */
-    function onChatHandler(channel, userstate, message, self) {
-      if (self || !message.startsWith('!play')) return;
-
-      /** @type {string} */
-      const username = userstate['display-name'];
-
-      const req = http.request(new URL(
-          alschema.messageRequest(channel.substring(1), alertMessage),
-      ));
-      req.on('error', (error) => {
-          console.error(error);
-      });
-      req.end();
-    }
+  }
 };
 
 module.exports = app;
