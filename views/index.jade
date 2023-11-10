@@ -1,4 +1,9 @@
-extends layout
-
-block content
-  
+doctype html
+html
+  head
+    title= 'Lotto'
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src="/socket.io/socket.io.js") 
+    script(src="/javascripts/index.js") 
+  body
+    block content

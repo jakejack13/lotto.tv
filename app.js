@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const tmi = require('tmi.js');
 
 const indexRouter = require('./routes/index');
 const lottery = require('./lottery');
@@ -37,66 +38,53 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-const req = http.request(new URL(dbschema.fieldRequest('channel')), (res) => {
-  res.on('data', (d) => {
-    channels = d.toString().split(',');
-    channelCallback();
-  });
-});
-req.on('error', (error) => {
-  console.error(error);
-});
-req.end();
 
-
-const channelCallback = () => {
-  /** @type {tmi.Options} */
-  const opts = {
-    identity: {
-      username: process.env.SEC_BOTUSERNAME,
-      password: process.env.SEC_OAUTHTOKEN,
-    },
-    channels: [process.env.SEC_BOTUSERNAME],
-  };
-
-  // eslint-disable-next-line new-cap
-  const client = new tmi.client(opts);
-  client.on('connected', onConnectedHandler);
-  client.on('chat', onChatHandler);
-  client.connect();
-
-  /**
-   * Print connection information (address and port)
-   * @param {string} addr - the connected IP address
-   * @param {number} port - the connected port
-   */
-  function onConnectedHandler(addr, port) {
-    console.log(`* Connected to ${addr}:${port}`);
-  }
-
-  /**
-   * Processes a chat message
-   * @param {string} channel
-   * @param {tmi.ChatUserstate} userstate
-   * @param {string} message
-   * @param {boolean} self
-   */
-  function onChatHandler(channel, userstate, message, self) {
-    if (self || !message.startsWith('!play')) return;
-
-    /** @type {string} */
-    const username = userstate['display-name'];
-    const [entry, alreadyFound] = lottery.addEntry(username);
-
-    if (alreadyFound) {
-      client.say(channel,
-          `@${username}: You already entered for this round! 
-          Your numbers are ${entry}`);
-    } else {
-      client.say(channel,
-          `@${username}: Successfully entered! Your numbers are ${entry}`);
-    }
-  }
+/** @type {tmi.Options} */
+const opts = {
+  identity: {
+    username: process.env.SEC_BOTUSERNAME,
+    password: process.env.SEC_OAUTHTOKEN,
+  },
+  channels: [process.env.SEC_BOTUSERNAME],
 };
+
+// eslint-disable-next-line new-cap
+const client = new tmi.client(opts);
+client.on('connected', onConnectedHandler);
+client.on('chat', onChatHandler);
+client.connect();
+
+/**
+ * Print connection information (address and port)
+ * @param {string} addr - the connected IP address
+ * @param {number} port - the connected port
+ */
+function onConnectedHandler(addr, port) {
+  console.log(`* Connected to ${addr}:${port}`);
+}
+
+/**
+ * Processes a chat message
+ * @param {string} channel
+ * @param {tmi.ChatUserstate} userstate
+ * @param {string} message
+ * @param {boolean} self
+ */
+function onChatHandler(channel, userstate, message, self) {
+  if (self || !message.startsWith('!play')) return;
+
+  /** @type {string} */
+  const username = userstate['display-name'];
+  const [entry, alreadyFound] = lottery.addEntry(username);
+
+  if (alreadyFound) {
+    client.say(channel,
+        `@${username}: You already entered for this round! 
+        Your numbers are ${entry}`);
+  } else {
+    client.say(channel,
+        `@${username}: Successfully entered! Your numbers are ${entry}`);
+  }
+}
 
 module.exports = app;
