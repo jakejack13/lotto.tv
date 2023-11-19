@@ -20,7 +20,7 @@
   "devDependencies": {
     "@types/node": "^20.9.1",
     "@types/tmi.js": "^1.8.0",
-    "eslint": "^8.53.0",
+    "eslint": "^8.54.0",
     "eslint-config-google": "^0.14.0"
   }
 }
