@@ -14,7 +14,7 @@
     "http-errors": "~2.0.0",
     "morgan": "~1.10.0",
     "pug": "^3.0.2",
-    "socket.io": "^4.7.3",
+    "socket.io": "^4.7.4",
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
